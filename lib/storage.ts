@@ -1,10 +1,29 @@
+export interface UserProfile {
+  age: string;
+  gender: string;       // "male" | "female" | "other" | ""
+  heightCm: string;
+  weightKg: string;
+  goal: string;         // e.g. "Build muscle"
+  activityLevel: string;// e.g. "Moderately active"
+}
+
 export interface UserData {
   name: string;
   sessionId: string;
   messageCount: number;
   streak: number;
   lastChatDate: string | null; // "YYYY-MM-DD"
+  profile: UserProfile;
 }
+
+export const EMPTY_PROFILE: UserProfile = {
+  age: "",
+  gender: "",
+  heightCm: "",
+  weightKg: "",
+  goal: "",
+  activityLevel: "",
+};
 
 const KEY = "fitcoach_v1";
 
@@ -20,7 +39,11 @@ export function loadUser(): UserData | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as UserData) : null;
+    if (!raw) return null;
+    const data = JSON.parse(raw) as UserData;
+    // migrate old saves that lack profile
+    if (!data.profile) data.profile = { ...EMPTY_PROFILE };
+    return data;
   } catch {
     return null;
   }
@@ -38,9 +61,21 @@ export function createUser(name: string): UserData {
     messageCount: 0,
     streak: 0,
     lastChatDate: null,
+    profile: { ...EMPTY_PROFILE },
   };
   saveUser(user);
   return user;
+}
+
+export function updateProfile(user: UserData, profile: UserProfile): UserData {
+  const updated = { ...user, profile };
+  saveUser(updated);
+  return updated;
+}
+
+export function signOut(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
 }
 
 export function recordMessage(user: UserData): UserData {
@@ -49,7 +84,7 @@ export function recordMessage(user: UserData): UserData {
 
   let streak = user.streak;
   if (user.lastChatDate === today) {
-    // same day -- no change
+    // same day — no change
   } else if (user.lastChatDate === yesterday || user.lastChatDate === null) {
     streak = streak + 1;
   } else {

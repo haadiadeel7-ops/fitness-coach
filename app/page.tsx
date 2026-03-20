@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { loadUser, createUser, recordMessage, UserData } from "@/lib/storage";
+import { loadUser, createUser, recordMessage, updateProfile, signOut, UserData, UserProfile } from "@/lib/storage";
 import { getLevelForMessages } from "@/lib/levels";
 import Onboarding from "@/components/Onboarding";
 import ChatPanel, { Message } from "@/components/ChatPanel";
 import Sidebar from "@/components/Sidebar";
 import LevelUpModal from "@/components/LevelUpModal";
 import ShareModal from "@/components/ShareModal";
+import ProfileModal from "@/components/ProfileModal";
 
 const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL!;
 
@@ -18,6 +19,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [levelUpName, setLevelUpName] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const prevLevelRef = useRef<number>(1);
 
@@ -33,6 +35,21 @@ export default function Home() {
   const handleStart = useCallback((name: string) => {
     const newUser = createUser(name);
     setUser(newUser);
+    prevLevelRef.current = 1;
+    // Prompt profile setup after onboarding
+    setShowProfile(true);
+  }, []);
+
+  const handleSaveProfile = useCallback((profile: UserProfile) => {
+    if (!user) return;
+    const updated = updateProfile(user, profile);
+    setUser(updated);
+  }, [user]);
+
+  const handleSignOut = useCallback(() => {
+    signOut();
+    setUser(null);
+    setMessages([]);
     prevLevelRef.current = 1;
   }, []);
 
@@ -56,6 +73,15 @@ export default function Home() {
           body: JSON.stringify({
             message: content,
             sessionId: user.sessionId,
+            profile: {
+              name: user.name,
+              age: user.profile.age || null,
+              gender: user.profile.gender || null,
+              heightCm: user.profile.heightCm || null,
+              weightKg: user.profile.weightKg || null,
+              goal: user.profile.goal || null,
+              activityLevel: user.profile.activityLevel || null,
+            },
           }),
         });
 
@@ -111,6 +137,7 @@ export default function Home() {
         onOpenSidebar={() => setMobileSidebarOpen(true)}
       />
 
+      {/* Mobile overlay backdrop */}
       {mobileSidebarOpen && (
         <div
           className="sidebar-backdrop"
@@ -121,6 +148,8 @@ export default function Home() {
       <Sidebar
         user={user}
         onShare={() => setShowShare(true)}
+        onEditProfile={() => setShowProfile(true)}
+        onSignOut={handleSignOut}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
       />
@@ -134,6 +163,14 @@ export default function Home() {
 
       {showShare && (
         <ShareModal user={user} onClose={() => setShowShare(false)} />
+      )}
+
+      {showProfile && (
+        <ProfileModal
+          user={user}
+          onSave={handleSaveProfile}
+          onClose={() => setShowProfile(false)}
+        />
       )}
     </div>
   );
