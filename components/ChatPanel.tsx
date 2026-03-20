@@ -3,12 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { UserData } from "@/lib/storage";
+import { Message } from "@/lib/types";
 
-export interface Message {
-  id: string;
-  role: "user" | "coach";
-  content: string;
-}
+export type { Message };
 
 interface Props {
   user: UserData;
@@ -16,9 +13,11 @@ interface Props {
   loading: boolean;
   onSend: (content: string) => void;
   onOpenSidebar: () => void;
+  onOpenSessions: () => void;
+  sessionsOpen: boolean;
 }
 
-export default function ChatPanel({ user, messages, loading, onSend, onOpenSidebar }: Props) {
+export default function ChatPanel({ user, messages, loading, onSend, onOpenSidebar, onOpenSessions, sessionsOpen }: Props) {
   const [input, setInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -64,7 +63,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
         borderRight: "1px solid var(--border)",
       }}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <div
         style={{
           display: "flex",
@@ -77,6 +76,39 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Sessions toggle */}
+          <button
+            onClick={onOpenSessions}
+            title={sessionsOpen ? "Hide chats" : "Show chats"}
+            style={{
+              background: sessionsOpen ? "var(--surface-3)" : "transparent",
+              border: "1px solid var(--border)",
+              color: sessionsOpen ? "var(--text)" : "var(--text-muted)",
+              width: "30px",
+              height: "30px",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              flexShrink: 0,
+              transition: "all 0.15s",
+            }}
+          >
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === 1 ? "10px" : "14px",
+                  height: "1.5px",
+                  background: "currentColor",
+                  transition: "width 0.2s",
+                }}
+              />
+            ))}
+          </button>
+
           <div
             style={{
               width: "7px",
@@ -86,7 +118,13 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               animation: "glow 2.5s ease infinite",
             }}
           />
-          <span style={{ fontSize: "14px", fontWeight: 700, letterSpacing: "-0.01em" }}>
+          <span
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+            }}
+          >
             FitCoach
           </span>
         </div>
@@ -103,7 +141,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
             {user.name.toUpperCase()}
           </span>
 
-          {/* Mobile stats toggle */}
+          {/* Mobile stats toggle — hidden on desktop via CSS */}
           <button
             className="mobile-stats-btn"
             onClick={onOpenSidebar}
@@ -125,7 +163,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
         </div>
       </div>
 
-      {/* Messages */}
+      {/* ── Messages ── */}
       <div
         style={{
           flex: 1,
@@ -149,8 +187,14 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               animation: "fadeIn 0.5s ease",
             }}
           >
-            <div style={{ fontSize: "44px", lineHeight: 1 }}>&#128170;</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.01em" }}>
+            <div style={{ fontSize: "44px", lineHeight: 1 }}>💪</div>
+            <div
+              style={{
+                fontSize: "16px",
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+              }}
+            >
               Ready when you are, {user.name.split(" ")[0]}.
             </div>
             <div
@@ -161,7 +205,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                 lineHeight: 1.65,
               }}
             >
-              Ask about workouts, nutrition, recovery &mdash; anything fitness.
+              Ask about workouts, nutrition, recovery — anything fitness.
             </div>
           </div>
         )}
@@ -177,6 +221,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               animation: "fadeUp 0.25s ease forwards",
             }}
           >
+            {/* Coach avatar */}
             {msg.role === "coach" && (
               <div
                 style={{
@@ -199,17 +244,20 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               </div>
             )}
 
+            {/* Bubble */}
             <div
               className={msg.role === "coach" ? "coach-message" : undefined}
               style={{
                 maxWidth: "70%",
                 padding: "12px 16px",
-                background: msg.role === "user" ? "var(--accent)" : "var(--surface-2)",
+                background:
+                  msg.role === "user" ? "var(--accent)" : "var(--surface-2)",
                 color: msg.role === "user" ? "#000" : "var(--text)",
                 fontSize: "14px",
                 lineHeight: "1.65",
                 fontWeight: msg.role === "user" ? 600 : 400,
-                borderLeft: msg.role === "coach" ? "2px solid var(--accent)" : "none",
+                borderLeft:
+                  msg.role === "coach" ? "2px solid var(--accent)" : "none",
               }}
             >
               {msg.role === "user" ? (
@@ -256,6 +304,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           </div>
         ))}
 
+        {/* Typing indicator */}
         {loading && (
           <div
             style={{
@@ -312,7 +361,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* ── Input ── */}
       <div
         style={{
           borderTop: "1px solid var(--border)",
@@ -320,7 +369,13 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            alignItems: "flex-end",
+          }}
+        >
           <textarea
             ref={textareaRef}
             value={input}
@@ -377,7 +432,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
             fontFamily: "var(--font-space-mono)",
           }}
         >
-          &uarr; send &middot; shift+&uarr; newline
+          ↵ send · shift+↵ newline
         </div>
       </div>
     </div>

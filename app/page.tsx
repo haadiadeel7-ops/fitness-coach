@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { loadUser, createUser, recordMessage, updateProfile, signOut, UserData, UserProfile } from "@/lib/storage";
+import { loadUser, createUser, recordMessage, signOut, UserData, UserProfile } from "@/lib/storage";
+import {
+  loadSessions,
+  saveSessions,
+  createSession,
+  upsertSession,
+  deleteSession,
+  ChatSession,
+} from "@/lib/sessions";
+import { Message } from "@/lib/types";
 import { getLevelForMessages } from "@/lib/levels";
 import Onboarding from "@/components/Onboarding";
-import ChatPanel, { Message } from "@/components/ChatPanel";
+import ChatPanel from "@/components/ChatPanel";
 import Sidebar from "@/components/Sidebar";
+import SessionsPanel from "@/components/SessionsPanel";
 import LevelUpModal from "@/components/LevelUpModal";
 import ShareModal from "@/components/ShareModal";
 import ProfileModal from "@/components/ProfileModal";
@@ -15,47 +25,136 @@ const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL!;
 export default function Home() {
   const [user, setUser] = useState<UserData | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  // Sessions
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [levelUpName, setLevelUpName] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   const prevLevelRef = useRef<number>(1);
+  const activeIdRef = useRef<string | null>(null);
+  useEffect(() => { activeIdRef.current = activeSessionId; }, [activeSessionId]);
 
   useEffect(() => {
     setMounted(true);
-    const saved = loadUser();
-    if (saved) {
-      setUser(saved);
-      prevLevelRef.current = getLevelForMessages(saved.messageCount).level;
+    const savedUser = loadUser();
+    if (savedUser) {
+      setUser(savedUser);
+      prevLevelRef.current = getLevelForMessages(savedUser.messageCount).level;
     }
+
+    let allSessions = loadSessions();
+    if (allSessions.length === 0) {
+      const fresh = createSession();
+      allSessions = [fresh];
+      saveSessions(allSessions);
+    }
+    setSessions(allSessions);
+    setActiveSessionId(allSessions[0].id);
+    setMessages(allSessions[0].messages);
   }, []);
+
+  /* ── Session helpers ── */
+
+  const handleNewChat = useCallback(() => {
+    const newSession = createSession();
+    setSessions((prev) => {
+      const updated = [newSession, ...prev];
+      saveSessions(updated);
+      return updated;
+    });
+    setActiveSessionId(newSession.id);
+    setMessages([]);
+    setMobileSessionsOpen(false);
+  }, []);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setSessions((prev) => {
+      const session = prev.find((s) => s.id === id);
+      if (session) {
+        setActiveSessionId(id);
+        setMessages(session.messages);
+      }
+      return prev;
+    });
+    setMobileSessionsOpen(false);
+  }, []);
+
+  const handleDeleteSession = useCallback((id: string) => {
+    setSessions((prev) => {
+      const remaining = deleteSession(prev, id);
+
+      if (id === activeIdRef.current) {
+        if (remaining.length > 0) {
+          setActiveSessionId(remaining[0].id);
+          setMessages(remaining[0].messages);
+        } else {
+          const fresh = createSession();
+          const withFresh = [fresh, ...remaining];
+          saveSessions(withFresh);
+          setActiveSessionId(fresh.id);
+          setMessages([]);
+          return withFresh;
+        }
+      }
+
+      saveSessions(remaining);
+      return remaining;
+    });
+  }, []);
+
+  /* ── User helpers ── */
 
   const handleStart = useCallback((name: string) => {
     const newUser = createUser(name);
     setUser(newUser);
     prevLevelRef.current = 1;
-    // Prompt profile setup after onboarding
     setShowProfile(true);
   }, []);
 
   const handleSaveProfile = useCallback((profile: UserProfile) => {
-    if (!user) return;
-    const updated = updateProfile(user, profile);
-    setUser(updated);
-  }, [user]);
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, profile };
+      import("@/lib/storage").then(({ saveUser }) => saveUser(updated));
+      return updated;
+    });
+  }, []);
 
   const handleSignOut = useCallback(() => {
     signOut();
     setUser(null);
     setMessages([]);
+    setSessions([]);
     prevLevelRef.current = 1;
   }, []);
+
+  /* ── Send message ── */
 
   const handleSend = useCallback(
     async (content: string) => {
       if (!user || loading) return;
+
+      let sessionId = activeIdRef.current;
+      if (!sessionId) {
+        const newSession = createSession();
+        setSessions((prev) => {
+          const updated = [newSession, ...prev];
+          saveSessions(updated);
+          return updated;
+        });
+        sessionId = newSession.id;
+        setActiveSessionId(sessionId);
+      }
 
       const userMsg: Message = {
         id: crypto.randomUUID(),
@@ -87,8 +186,7 @@ export default function Home() {
 
         const data = await res.json();
         const reply =
-          data.reply ||
-          "I couldn't process that response. Please try again.";
+          data.reply || "I couldn't process that response. Please try again.";
 
         const coachMsg: Message = {
           id: crypto.randomUUID(),
@@ -96,7 +194,30 @@ export default function Home() {
           content: reply,
         };
 
-        setMessages((prev) => [...prev, coachMsg]);
+        setMessages((prev) => {
+          const updated = [...prev, coachMsg];
+
+          const sid = activeIdRef.current;
+          if (sid) {
+            setSessions((allSessions) => {
+              const session = allSessions.find((s) => s.id === sid);
+              if (!session) return allSessions;
+              const updatedSession: ChatSession = {
+                ...session,
+                messages: updated,
+                title:
+                  session.title ||
+                  content.slice(0, 52) + (content.length > 52 ? "…" : ""),
+                updatedAt: new Date().toISOString(),
+              };
+              const newSessions = upsertSession(allSessions, updatedSession);
+              saveSessions(newSessions);
+              return newSessions;
+            });
+          }
+
+          return updated;
+        });
 
         const updated = recordMessage(user);
         setUser(updated);
@@ -110,8 +231,7 @@ export default function Home() {
         const errMsg: Message = {
           id: crypto.randomUUID(),
           role: "coach",
-          content:
-            "Couldn't reach the server. Check your connection and try again.",
+          content: "Couldn't reach the server. Check your connection and try again.",
         };
         setMessages((prev) => [...prev, errMsg]);
       } finally {
@@ -127,17 +247,47 @@ export default function Home() {
     return <Onboarding onStart={handleStart} />;
   }
 
+  const toggleSessions = () => {
+    if (window.innerWidth <= 768) {
+      setMobileSessionsOpen((v) => !v);
+    } else {
+      setSessionsOpen((v) => !v);
+    }
+  };
+
   return (
     <div className="app-layout">
+      {/* Mobile sessions backdrop */}
+      {mobileSessionsOpen && (
+        <div
+          className="sessions-backdrop"
+          onClick={() => setMobileSessionsOpen(false)}
+        />
+      )}
+
+      {/* Single SessionsPanel — desktop: collapses via CSS; mobile: fixed overlay */}
+      <SessionsPanel
+        sessions={sessions}
+        activeId={activeSessionId}
+        onSelect={handleSelectSession}
+        onNew={handleNewChat}
+        onDelete={handleDeleteSession}
+        onClose={() => { setSessionsOpen(false); setMobileSessionsOpen(false); }}
+        mobileOpen={mobileSessionsOpen}
+        desktopVisible={sessionsOpen}
+      />
+
       <ChatPanel
         user={user}
         messages={messages}
         loading={loading}
         onSend={handleSend}
         onOpenSidebar={() => setMobileSidebarOpen(true)}
+        onOpenSessions={toggleSessions}
+        sessionsOpen={sessionsOpen}
       />
 
-      {/* Mobile overlay backdrop */}
+      {/* Mobile sidebar overlay backdrop */}
       {mobileSidebarOpen && (
         <div
           className="sidebar-backdrop"

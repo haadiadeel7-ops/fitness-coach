@@ -46,7 +46,7 @@ body {
 ::-webkit-scrollbar-thumb    { background: var(--border-2); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ── Keyframes ──────────────────────────────────────────────────── */
+/* ── Keyframes ─────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -80,7 +80,7 @@ body {
 /* Markdown message cleanup */
 .coach-message > *:last-child { margin-bottom: 0 !important; }
 
-/* ── Layout ──────────────────────────────────────────────────── */
+/* ── Layout ──────────────────────────────────── */
 
 .app-layout {
   display: flex;
@@ -88,19 +88,28 @@ body {
   overflow: hidden;
 }
 
-/* Mobile-only controls hidden on desktop */
-.mobile-stats-btn  { display: none !important; }
-.mobile-close-btn  { display: none !important; }
-.sidebar-backdrop  { display: none !important; }
+/* Mobile stats button — hidden on desktop */
+.mobile-stats-btn    { display: none !important; }
+.mobile-close-btn    { display: none !important; }
+.sidebar-backdrop    { display: none !important; }
+.sessions-backdrop   { display: none !important; }
 
-/* ── Mobile breakpoint ────────────────────────────────────── */
+/* Sessions panel — collapsed on desktop when hidden */
+.sessions-panel.sessions-hidden {
+  width: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden;
+  border-right: none !important;
+}
+
+/* ── Mobile breakpoint ───────────────────────────── */
 
 @media (max-width: 768px) {
   /* Show mobile controls */
   .mobile-stats-btn { display: block !important; }
   .mobile-close-btn { display: block !important; }
 
-  /* Sidebar becomes a slide-in drawer */
+  /* Sidebar becomes a slide-in drawer from right */
   .sidebar-panel {
     position: fixed !important;
     top: 0;
@@ -118,7 +127,33 @@ body {
     transform: translateX(0);
   }
 
-  /* Backdrop */
+  /* Restore sessions panel on mobile (desktop sessions-hidden class doesn't apply) */
+  .sessions-panel.sessions-hidden {
+    width: 80% !important;
+    min-width: unset !important;
+    overflow: auto !important;
+    border-right: 1px solid var(--border) !important;
+  }
+
+  /* Sessions panel becomes a slide-in drawer from left */
+  .sessions-panel {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 80% !important;
+    max-width: 280px;
+    z-index: 150;
+    transform: translateX(-110%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .sessions-panel.open {
+    transform: translateX(0);
+  }
+
+  /* Backdrops */
   .sidebar-backdrop {
     display: block !important;
     position: fixed;
@@ -128,8 +163,18 @@ body {
     animation: fadeIn 0.2s ease;
   }
 
-  /* Wider bubbles on small screens */
-  .coach-message {
+  .sessions-backdrop {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 140;
+    animation: fadeIn 0.2s ease;
+  }
+
+  /* Chat bubbles can go wider on small screens */
+  .coach-message,
+  .user-bubble {
     max-width: 90% !important;
   }
 }
