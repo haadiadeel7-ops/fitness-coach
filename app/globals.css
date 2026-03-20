@@ -46,7 +46,7 @@ body {
 ::-webkit-scrollbar-thumb    { background: var(--border-2); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ── Keyframes ──────────────────────────────────────────────────── */
+/* ── Keyframes ─────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -76,3 +76,6 @@ body {
 @keyframes progressFill {
   from { width: 0%; }
 }
+
+/* Markdown message cleanup */
+.coach-message > *:last-child { margin-bottom: 0 !important; }
