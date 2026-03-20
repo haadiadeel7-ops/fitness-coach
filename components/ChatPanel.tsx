@@ -15,9 +15,10 @@ interface Props {
   messages: Message[];
   loading: boolean;
   onSend: (content: string) => void;
+  onOpenSidebar: () => void;
 }
 
-export default function ChatPanel({ user, messages, loading, onSend }: Props) {
+export default function ChatPanel({ user, messages, loading, onSend, onOpenSidebar }: Props) {
   const [input, setInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -90,16 +91,38 @@ export default function ChatPanel({ user, messages, loading, onSend }: Props) {
           </span>
         </div>
 
-        <span
-          style={{
-            fontSize: "11px",
-            color: "var(--text-muted)",
-            fontFamily: "var(--font-space-mono)",
-            letterSpacing: "0.08em",
-          }}
-        >
-          {user.name.toUpperCase()}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span
+            style={{
+              fontSize: "11px",
+              color: "var(--text-muted)",
+              fontFamily: "var(--font-space-mono)",
+              letterSpacing: "0.08em",
+            }}
+          >
+            {user.name.toUpperCase()}
+          </span>
+
+          {/* Mobile stats toggle */}
+          <button
+            className="mobile-stats-btn"
+            onClick={onOpenSidebar}
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border-2)",
+              color: "var(--accent)",
+              padding: "6px 12px",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              fontFamily: "var(--font-syne)",
+            }}
+          >
+            Stats
+          </button>
+        </div>
       </div>
 
       {/* Messages */}

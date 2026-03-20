@@ -18,6 +18,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [levelUpName, setLevelUpName] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const prevLevelRef = useRef<number>(1);
 
   useEffect(() => {
@@ -71,7 +72,6 @@ export default function Home() {
 
         setMessages((prev) => [...prev, coachMsg]);
 
-        // Update stats and check for level-up
         const updated = recordMessage(user);
         setUser(updated);
 
@@ -102,15 +102,28 @@ export default function Home() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <div className="app-layout">
       <ChatPanel
         user={user}
         messages={messages}
         loading={loading}
         onSend={handleSend}
+        onOpenSidebar={() => setMobileSidebarOpen(true)}
       />
 
-      <Sidebar user={user} onShare={() => setShowShare(true)} />
+      {mobileSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        user={user}
+        onShare={() => setShowShare(true)}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+      />
 
       {levelUpName && (
         <LevelUpModal

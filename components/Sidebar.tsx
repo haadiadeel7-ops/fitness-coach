@@ -8,11 +8,13 @@ import { getTipOfTheDay } from "@/lib/tips";
 interface Props {
   user: UserData;
   onShare: () => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI"];
 
-export default function Sidebar({ user, onShare }: Props) {
+export default function Sidebar({ user, onShare, mobileOpen, onMobileClose }: Props) {
   const level = getLevelForMessages(user.messageCount);
   const progress = getProgress(user.messageCount);
   const tip = getTipOfTheDay();
@@ -20,6 +22,7 @@ export default function Sidebar({ user, onShare }: Props) {
 
   return (
     <div
+      className={`sidebar-panel${mobileOpen ? " open" : ""}`}
       style={{
         width: "300px",
         flexShrink: 0,
@@ -35,6 +38,7 @@ export default function Sidebar({ user, onShare }: Props) {
           height: "60px",
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
           padding: "0 20px",
           borderBottom: "1px solid var(--border)",
         }}
@@ -50,6 +54,22 @@ export default function Sidebar({ user, onShare }: Props) {
         >
           Performance
         </span>
+
+        <button
+          className="mobile-close-btn"
+          onClick={onMobileClose}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "var(--text-muted)",
+            fontSize: "18px",
+            cursor: "pointer",
+            lineHeight: 1,
+            padding: "4px",
+          }}
+        >
+          ✕
+        </button>
       </div>
 
       {/* Level */}
@@ -120,9 +140,7 @@ export default function Sidebar({ user, onShare }: Props) {
           >
             <span>{user.messageCount} msgs</span>
             {progress.nextLevel ? (
-              <span>
-                {progress.total - progress.current} to {progress.nextLevel.name}
-              </span>
+              <span>{progress.total - progress.current} to {progress.nextLevel.name}</span>
             ) : (
               <span style={{ color: "var(--accent)" }}>MAX LEVEL</span>
             )}
