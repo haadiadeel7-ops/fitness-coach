@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Syne } from "next/font/google";
 import { Space_Mono } from "next/font/google";
 import "./globals.css";
+import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -19,8 +20,7 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   title: "FitCoach — Your AI Performance Coach",
-  description:
-    "Chat with your personal AI fitness coach. Get workout plans, nutrition advice, and stay motivated.",
+  description: "Chat with your personal AI fitness coach. Get workout plans, nutrition advice, and stay motivated.",
 };
 
 export default function RootLayout({
@@ -35,7 +35,7 @@ export default function RootLayout({
       style={{ height: "100%" }}
     >
       <body style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        {children}
+        <SessionProviderWrapper>{children}</SessionProviderWrapper>
       </body>
     </html>
   );

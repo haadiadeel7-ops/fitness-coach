@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { loadUser, createUser, recordMessage, signOut, UserData, UserProfile } from "@/lib/storage";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { loadUser, createUser, recordMessage, updateProfile, signOut, UserData, UserProfile } from "@/lib/storage";
 import {
   loadSessions,
   saveSessions,
@@ -23,6 +25,8 @@ import ProfileModal from "@/components/ProfileModal";
 const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL!;
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -44,9 +48,22 @@ export default function Home() {
   const activeIdRef = useRef<string | null>(null);
   useEffect(() => { activeIdRef.current = activeSessionId; }, [activeSessionId]);
 
+  // Redirect unauthenticated users to /auth
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/auth");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
     setMounted(true);
-    const savedUser = loadUser();
+
+    let savedUser = loadUser();
+    // Auto-create localStorage user from NextAuth session on first sign-in
+    if (!savedUser && session?.user?.name) {
+      savedUser = createUser(session.user.name);
+    }
     if (savedUser) {
       setUser(savedUser);
       prevLevelRef.current = getLevelForMessages(savedUser.messageCount).level;
@@ -61,7 +78,7 @@ export default function Home() {
     setSessions(allSessions);
     setActiveSessionId(allSessions[0].id);
     setMessages(allSessions[0].messages);
-  }, []);
+  }, [status, session]);
 
   /* ── Session helpers ── */
 
@@ -136,6 +153,7 @@ export default function Home() {
     setMessages([]);
     setSessions([]);
     prevLevelRef.current = 1;
+    nextAuthSignOut({ callbackUrl: "/auth" });
   }, []);
 
   /* ── Send message ── */
@@ -185,8 +203,7 @@ export default function Home() {
         });
 
         const data = await res.json();
-        const reply =
-          data.reply || "I couldn't process that response. Please try again.";
+        const reply = data.reply || "I couldn't process that response. Please try again.";
 
         const coachMsg: Message = {
           id: crypto.randomUUID(),
@@ -196,7 +213,6 @@ export default function Home() {
 
         setMessages((prev) => {
           const updated = [...prev, coachMsg];
-
           const sid = activeIdRef.current;
           if (sid) {
             setSessions((allSessions) => {
@@ -205,9 +221,7 @@ export default function Home() {
               const updatedSession: ChatSession = {
                 ...session,
                 messages: updated,
-                title:
-                  session.title ||
-                  content.slice(0, 52) + (content.length > 52 ? "…" : ""),
+                title: session.title || content.slice(0, 52) + (content.length > 52 ? "…" : ""),
                 updatedAt: new Date().toISOString(),
               };
               const newSessions = upsertSession(allSessions, updatedSession);
@@ -215,7 +229,6 @@ export default function Home() {
               return newSessions;
             });
           }
-
           return updated;
         });
 
@@ -241,7 +254,8 @@ export default function Home() {
     [user, loading]
   );
 
-  if (!mounted) return null;
+  if (status === "loading" || !mounted) return null;
+  if (status === "unauthenticated") return null;
 
   if (!user) {
     return <Onboarding onStart={handleStart} />;
@@ -257,15 +271,10 @@ export default function Home() {
 
   return (
     <div className="app-layout">
-      {/* Mobile sessions backdrop */}
       {mobileSessionsOpen && (
-        <div
-          className="sessions-backdrop"
-          onClick={() => setMobileSessionsOpen(false)}
-        />
+        <div className="sessions-backdrop" onClick={() => setMobileSessionsOpen(false)} />
       )}
 
-      {/* Single SessionsPanel — desktop: collapses via CSS; mobile: fixed overlay */}
       <SessionsPanel
         sessions={sessions}
         activeId={activeSessionId}
@@ -287,12 +296,8 @@ export default function Home() {
         sessionsOpen={sessionsOpen}
       />
 
-      {/* Mobile sidebar overlay backdrop */}
       {mobileSidebarOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
+        <div className="sidebar-backdrop" onClick={() => setMobileSidebarOpen(false)} />
       )}
 
       <Sidebar
@@ -305,10 +310,7 @@ export default function Home() {
       />
 
       {levelUpName && (
-        <LevelUpModal
-          levelName={levelUpName}
-          onClose={() => setLevelUpName(null)}
-        />
+        <LevelUpModal levelName={levelUpName} onClose={() => setLevelUpName(null)} />
       )}
 
       {showShare && (
@@ -316,11 +318,7 @@ export default function Home() {
       )}
 
       {showProfile && (
-        <ProfileModal
-          user={user}
-          onSave={handleSaveProfile}
-          onClose={() => setShowProfile(false)}
-        />
+        <ProfileModal user={user} onSave={handleSaveProfile} onClose={() => setShowProfile(false)} />
       )}
     </div>
   );
