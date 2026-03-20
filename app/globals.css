@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-display: var(--font-syne);
+  --font-mono: var(--font-space-mono);
+}
+
+:root {
+  --bg:         #080808;
+  --surface:    #101010;
+  --surface-2:  #161616;
+  --surface-3:  #1e1e1e;
+  --border:     #1c1c1c;
+  --border-2:   #262626;
+  --accent:     #00ff88;
+  --accent-dim: rgba(0, 255, 136, 0.08);
+  --accent-mid: rgba(0, 255, 136, 0.18);
+  --text:       #ebebeb;
+  --text-muted: #484848;
+  --text-dim:   #2a2a2a;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-syne), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent);
+  color: #000;
+}
+
+::-webkit-scrollbar          { width: 3px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border-2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Keyframes ──────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 6px var(--accent); }
+  50%       { box-shadow: 0 0 14px var(--accent); }
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+}
