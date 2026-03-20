@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { UserData } from "@/lib/storage";
 
 export interface Message {
@@ -176,20 +177,58 @@ export default function ChatPanel({ user, messages, loading, onSend }: Props) {
             )}
 
             <div
+              className={msg.role === "coach" ? "coach-message" : undefined}
               style={{
                 maxWidth: "70%",
                 padding: "12px 16px",
-                background:
-                  msg.role === "user" ? "var(--accent)" : "var(--surface-2)",
+                background: msg.role === "user" ? "var(--accent)" : "var(--surface-2)",
                 color: msg.role === "user" ? "#000" : "var(--text)",
                 fontSize: "14px",
                 lineHeight: "1.65",
                 fontWeight: msg.role === "user" ? 600 : 400,
-                borderLeft:
-                  msg.role === "coach" ? "2px solid var(--accent)" : "none",
+                borderLeft: msg.role === "coach" ? "2px solid var(--accent)" : "none",
               }}
             >
-              {msg.content}
+              {msg.role === "user" ? (
+                msg.content
+              ) : (
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => (
+                      <p style={{ margin: "0 0 10px 0" }}>{children}</p>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 style={{ fontSize: "16px", fontWeight: 800, margin: "14px 0 6px", letterSpacing: "-0.01em" }}>{children}</h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 style={{ fontSize: "15px", fontWeight: 700, margin: "14px 0 6px", letterSpacing: "-0.01em" }}>{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "12px 0 4px", color: "var(--accent)" }}>{children}</h3>
+                    ),
+                    strong: ({ children }) => (
+                      <strong style={{ fontWeight: 700, color: "var(--accent)" }}>{children}</strong>
+                    ),
+                    ul: ({ children }) => (
+                      <ul style={{ margin: "6px 0 10px 0", paddingLeft: "18px" }}>{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol style={{ margin: "6px 0 10px 0", paddingLeft: "18px" }}>{children}</ol>
+                    ),
+                    li: ({ children }) => (
+                      <li style={{ margin: "4px 0", lineHeight: "1.6" }}>{children}</li>
+                    ),
+                    hr: () => (
+                      <hr style={{ border: "none", borderTop: "1px solid var(--border-2)", margin: "10px 0" }} />
+                    ),
+                    code: ({ children }) => (
+                      <code style={{ background: "var(--surface-3)", padding: "1px 5px", fontSize: "12px", fontFamily: "var(--font-space-mono)" }}>{children}</code>
+                    ),
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              )}
             </div>
           </div>
         ))}
