@@ -28,18 +28,33 @@ function processContent(content: string): string {
   return content.replace(
     /\[IMAGE:\s*([^\]]+)\]/gi,
     (_, desc) =>
-      `\n![${desc.trim()}](https://image.pollinations.ai/prompt/${encodeURIComponent(
-        desc.trim()
-      )}?width=700&height=420&nologo=true)\n`
+      `\n![${desc.trim()}](/api/generate-image?prompt=${encodeURIComponent(desc.trim())})\n`
   );
 }
 
 function InlineImage({ src, alt }: { src: string; alt: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+
+  useEffect(() => {
+    if (!src) { setStatus("error"); return; }
+
+    if (src.startsWith("/api/generate-image")) {
+      fetch(src)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.url) setImageUrl(data.url);
+          else setStatus("error");
+        })
+        .catch(() => setStatus("error"));
+    } else {
+      setImageUrl(src);
+    }
+  }, [src]);
 
   return (
     <div style={{ margin: "14px 0" }}>
-      {status === "loading" && (
+      {status !== "error" && !imageUrl && (
         <div
           style={{
             width: "100%",
@@ -98,31 +113,76 @@ function InlineImage({ src, alt }: { src: string; alt: string }) {
         </div>
       )}
 
-      <img
-        src={src}
-        alt={alt}
-        style={{
-          display: status === "loaded" ? "block" : "none",
-          maxWidth: "100%",
-          borderRadius: "6px",
-          border: "1px solid var(--border-2)",
-        }}
-        onLoad={() => setStatus("loaded")}
-        onError={() => setStatus("error")}
-      />
-
-      {status === "loaded" && alt && (
-        <div
-          style={{
-            fontSize: "10px",
-            color: "var(--text-dim)",
-            marginTop: "6px",
-            fontFamily: "var(--font-space-mono)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          {alt}
-        </div>
+      {imageUrl && (
+        <>
+          <img
+            src={imageUrl}
+            alt={alt}
+            style={{
+              display: status === "loaded" ? "block" : "none",
+              maxWidth: "100%",
+              borderRadius: "6px",
+              border: "1px solid var(--border-2)",
+            }}
+            onLoad={() => setStatus("loaded")}
+            onError={() => setStatus("error")}
+          />
+          {status !== "loaded" && (
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "500px",
+                aspectRatio: "1/1",
+                background: "var(--surface-3)",
+                border: "1px solid var(--border-2)",
+                borderRadius: "6px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", gap: "5px" }}>
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                      animation: `pulse 1.2s ease ${i * 0.22}s infinite`,
+                    }}
+                  />
+                ))}
+              </div>
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: "var(--text-dim)",
+                  fontFamily: "var(--font-space-mono)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                Loading image…
+              </div>
+            </div>
+          )}
+          {status === "loaded" && alt && (
+            <div
+              style={{
+                fontSize: "10px",
+                color: "var(--text-dim)",
+                marginTop: "6px",
+                fontFamily: "var(--font-space-mono)",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {alt}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -218,7 +278,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               />
             ))}
           </button>
-
           <div
             style={{
               width: "7px",
@@ -306,7 +365,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                 Ask about workouts, nutrition, recovery — anything fitness.
               </div>
             </div>
-
             <div
               style={{
                 display: "grid",
