@@ -13,42 +13,37 @@ import {
   ChatSession,
 } from "@/lib/sessions";
 import { Message } from "@/lib/types";
-import { getLevelForMessages } from "@/lib/levels";
-import Onboarding from "@/components/Onboarding";
-import ChatPanel from "@/components/ChatPanel";
 import Sidebar from "@/components/Sidebar";
-import SessionsPanel from "@/components/SessionsPanel";
-import LevelUpModal from "@/components/LevelUpModal";
-import ShareModal from "@/components/ShareModal";
+import ChatPanel from "@/components/ChatPanel";
 import ProfileModal from "@/components/ProfileModal";
+import SessionsPanel from "@/components/SessionsPanel";
 
-const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL!;
+function getLevelForMessages(count: number) {
+  if (count < 10) return { level: 1, name: "Beginner" };
+  if (count < 25) return { level: 2, name: "Active" };
+  if (count < 50) return { level: 3, name: "Dedicated" };
+  if (count < 100) return { level: 4, name: "Advanced" };
+  return { level: 5, name: "Elite" };
+}
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [mounted, setMounted] = useState(false);
-
-  // Sessions
+  const [profileOpen, setProfileOpen] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(true);
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
-
-  // UI state
-  const [loading, setLoading] = useState(false);
-  const [levelUpName, setLevelUpName] = useState<string | null>(null);
-  const [showShare, setShowShare] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  const prevLevelRef = useRef<number>(1);
   const activeIdRef = useRef<string | null>(null);
-  useEffect(() => { activeIdRef.current = activeSessionId; }, [activeSessionId]);
+  const prevLevelRef = useRef(1);
 
-  // Redirect unauthenticated users to /auth
+  useEffect(() => {
+    activeIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/auth");
@@ -60,6 +55,11 @@ export default function Home() {
     setMounted(true);
 
     let savedUser = loadUser();
+    // Reset localStorage if it belongs to a different user
+    if (savedUser && session?.user?.name && savedUser.name !== session.user.name) {
+      signOut();
+      savedUser = null;
+    }
     // Auto-create localStorage user from NextAuth session on first sign-in
     if (!savedUser && session?.user?.name) {
       savedUser = createUser(session.user.name);
@@ -81,72 +81,140 @@ export default function Home() {
   }, [status, session]);
 
   /* ── Session helpers ── */
-
   const handleNewChat = useCallback(() => {
-    const newSession = createSession();
+    const fresh = createSession();
     setSessions((prev) => {
-      const updated = [newSession, ...prev];
+      const updated = [fresh, ...prev];
       saveSessions(updated);
       return updated;
     });
-    setActiveSessionId(newSession.id);
+    setActiveSessionId(fresh.id);
     setMessages([]);
     setMobileSessionsOpen(false);
   }, []);
 
-  const handleSelectSession = useCallback((id: string) => {
-    setSessions((prev) => {
-      const session = prev.find((s) => s.id === id);
-      if (session) {
-        setActiveSessionId(id);
-        setMessages(session.messages);
-      }
-      return prev;
-    });
-    setMobileSessionsOpen(false);
-  }, []);
+  const handleSelectSession = useCallback(
+    (id: string) => {
+      const found = sessions.find((s) => s.id === id);
+      if (!found) return;
+      setActiveSessionId(id);
+      setMessages(found.messages);
+      setMobileSessionsOpen(false);
+    },
+    [sessions]
+  );
 
-  const handleDeleteSession = useCallback((id: string) => {
-    setSessions((prev) => {
-      const remaining = deleteSession(prev, id);
-
-      if (id === activeIdRef.current) {
-        if (remaining.length > 0) {
-          setActiveSessionId(remaining[0].id);
-          setMessages(remaining[0].messages);
-        } else {
-          const fresh = createSession();
-          const withFresh = [fresh, ...remaining];
-          saveSessions(withFresh);
-          setActiveSessionId(fresh.id);
-          setMessages([]);
-          return withFresh;
+  const handleDeleteSession = useCallback(
+    (id: string) => {
+      setSessions((prev) => {
+        const updated = deleteSession(prev, id);
+        saveSessions(updated);
+        if (id === activeIdRef.current) {
+          if (updated.length === 0) {
+            const fresh = createSession();
+            saveSessions([fresh]);
+            setActiveSessionId(fresh.id);
+            setMessages([]);
+            return [fresh];
+          }
+          setActiveSessionId(updated[0].id);
+          setMessages(updated[0].messages);
         }
+        return updated;
+      });
+    },
+    []
+  );
+
+  const toggleSessions = useCallback(() => {
+    if (window.innerWidth <= 768) {
+      setMobileSessionsOpen((v) => !v);
+    } else {
+      setSessionsOpen((v) => !v);
+    }
+  }, []);
+
+  /* ── Chat ── */
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!user) return;
+
+      const userMsg: Message = { id: Date.now().toString(), role: "user", content: text };
+      setMessages((prev) => [...prev, userMsg]);
+
+      const updatedUser = recordMessage(user);
+      setUser(updatedUser);
+
+      const sessionId = updatedUser.sessionId;
+      const p = updatedUser.profile;
+      const profilePayload =
+        p.age || p.gender || p.heightCm || p.weightKg || p.goal || p.activityLevel
+          ? {
+              age: p.age || null,
+              gender: p.gender || null,
+              heightCm: p.heightCm || null,
+              weightKg: p.weightKg || null,
+              goal: p.goal || null,
+              activityLevel: p.activityLevel || null,
+            }
+          : null;
+
+      try {
+        const res = await fetch(process.env.NEXT_PUBLIC_WEBHOOK_URL!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, sessionId, profile: profilePayload }),
+        });
+        const data = await res.json();
+        const reply = data.reply || data.output || data.text || "Sorry, I couldn't get a response.";
+        const coachMsg: Message = { id: (Date.now() + 1).toString(), role: "coach", content: reply };
+
+        setMessages((prev) => {
+          const updated = [...prev, coachMsg];
+          const currentId = activeIdRef.current;
+          if (currentId) {
+            setSessions((prevSessions) => {
+              const target = prevSessions.find((s) => s.id === currentId);
+              const title =
+                target?.title === "New Chat"
+                  ? text.slice(0, 52) + (text.length > 52 ? "…" : "")
+                  : target?.title ?? "New Chat";
+              const updatedSessions = upsertSession(prevSessions, {
+                ...(target ?? createSession()),
+                id: currentId,
+                title,
+                messages: updated,
+              });
+              saveSessions(updatedSessions);
+              return updatedSessions;
+            });
+          }
+          return updated;
+        });
+      } catch {
+        const errMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "coach",
+          content: "Connection error. Please try again.",
+        };
+        setMessages((prev) => [...prev, errMsg]);
       }
+    },
+    [user]
+  );
 
-      saveSessions(remaining);
-      return remaining;
-    });
-  }, []);
-
-  /* ── User helpers ── */
-
-  const handleStart = useCallback((name: string) => {
-    const newUser = createUser(name);
-    setUser(newUser);
-    prevLevelRef.current = 1;
-    setShowProfile(true);
-  }, []);
-
-  const handleSaveProfile = useCallback((profile: UserProfile) => {
+  /* ── Profile ── */
+  const handleSaveProfile = useCallback(async (profile: UserProfile) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const updated = { ...prev, profile };
-      import("@/lib/storage").then(({ saveUser }) => saveUser(updated));
+      const { saveUser } = require("@/lib/storage");
+      const updated = updateProfile(prev, profile);
+      saveUser(updated);
       return updated;
     });
   }, []);
 
+  /* ── Sign out ── */
   const handleSignOut = useCallback(() => {
     signOut();
     setUser(null);
@@ -156,123 +224,19 @@ export default function Home() {
     nextAuthSignOut({ callbackUrl: "/auth" });
   }, []);
 
-  /* ── Send message ── */
+  if (!mounted || status === "loading") return null;
 
-  const handleSend = useCallback(
-    async (content: string) => {
-      if (!user || loading) return;
-
-      let sessionId = activeIdRef.current;
-      if (!sessionId) {
-        const newSession = createSession();
-        setSessions((prev) => {
-          const updated = [newSession, ...prev];
-          saveSessions(updated);
-          return updated;
-        });
-        sessionId = newSession.id;
-        setActiveSessionId(sessionId);
-      }
-
-      const userMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-      };
-
-      setMessages((prev) => [...prev, userMsg]);
-      setLoading(true);
-
-      try {
-        const res = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: content,
-            sessionId: user.sessionId,
-            profile: {
-              name: user.name,
-              age: user.profile.age || null,
-              gender: user.profile.gender || null,
-              heightCm: user.profile.heightCm || null,
-              weightKg: user.profile.weightKg || null,
-              goal: user.profile.goal || null,
-              activityLevel: user.profile.activityLevel || null,
-            },
-          }),
-        });
-
-        const data = await res.json();
-        const reply = data.reply || "I couldn't process that response. Please try again.";
-
-        const coachMsg: Message = {
-          id: crypto.randomUUID(),
-          role: "coach",
-          content: reply,
-        };
-
-        setMessages((prev) => {
-          const updated = [...prev, coachMsg];
-          const sid = activeIdRef.current;
-          if (sid) {
-            setSessions((allSessions) => {
-              const session = allSessions.find((s) => s.id === sid);
-              if (!session) return allSessions;
-              const updatedSession: ChatSession = {
-                ...session,
-                messages: updated,
-                title: session.title || content.slice(0, 52) + (content.length > 52 ? "…" : ""),
-                updatedAt: new Date().toISOString(),
-              };
-              const newSessions = upsertSession(allSessions, updatedSession);
-              saveSessions(newSessions);
-              return newSessions;
-            });
-          }
-          return updated;
-        });
-
-        const updated = recordMessage(user);
-        setUser(updated);
-
-        const newLevel = getLevelForMessages(updated.messageCount).level;
-        if (newLevel > prevLevelRef.current) {
-          setLevelUpName(getLevelForMessages(updated.messageCount).name);
-          prevLevelRef.current = newLevel;
-        }
-      } catch {
-        const errMsg: Message = {
-          id: crypto.randomUUID(),
-          role: "coach",
-          content: "Couldn't reach the server. Check your connection and try again.",
-        };
-        setMessages((prev) => [...prev, errMsg]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user, loading]
-  );
-
-  if (status === "loading" || !mounted) return null;
-  if (status === "unauthenticated") return null;
-
-  if (!user) {
-    return <Onboarding onStart={handleStart} />;
-  }
-
-  const toggleSessions = () => {
-    if (window.innerWidth <= 768) {
-      setMobileSessionsOpen((v) => !v);
-    } else {
-      setSessionsOpen((v) => !v);
-    }
-  };
+  const levelInfo = getLevelForMessages(user?.messageCount ?? 0);
 
   return (
-    <div className="app-layout">
+    <div style={{ display: "flex", height: "100dvh", background: "#080808", overflow: "hidden", position: "relative" }}>
+      {/* Mobile backdrop */}
       {mobileSessionsOpen && (
-        <div className="sessions-backdrop" onClick={() => setMobileSessionsOpen(false)} />
+        <div
+          className="sessions-backdrop"
+          onClick={() => setMobileSessionsOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40 }}
+        />
       )}
 
       <SessionsPanel
@@ -281,44 +245,39 @@ export default function Home() {
         onSelect={handleSelectSession}
         onNew={handleNewChat}
         onDelete={handleDeleteSession}
-        onClose={() => { setSessionsOpen(false); setMobileSessionsOpen(false); }}
+        onClose={() => {
+          setSessionsOpen(false);
+          setMobileSessionsOpen(false);
+        }}
         mobileOpen={mobileSessionsOpen}
         desktopVisible={sessionsOpen}
       />
 
-      <ChatPanel
-        user={user}
-        messages={messages}
-        loading={loading}
-        onSend={handleSend}
-        onOpenSidebar={() => setMobileSidebarOpen(true)}
-        onOpenSessions={toggleSessions}
-        sessionsOpen={sessionsOpen}
-      />
-
-      {mobileSidebarOpen && (
-        <div className="sidebar-backdrop" onClick={() => setMobileSidebarOpen(false)} />
-      )}
-
       <Sidebar
-        user={user}
-        onShare={() => setShowShare(true)}
-        onEditProfile={() => setShowProfile(true)}
+        name={user?.name ?? ""}
+        messageCount={user?.messageCount ?? 0}
+        streak={user?.streak ?? 0}
+        level={levelInfo.level}
+        levelName={levelInfo.name}
+        profile={user?.profile ?? { age: "", gender: "", heightCm: "", weightKg: "", goal: "", activityLevel: "" }}
+        onEditProfile={() => setProfileOpen(true)}
         onSignOut={handleSignOut}
-        mobileOpen={mobileSidebarOpen}
-        onMobileClose={() => setMobileSidebarOpen(false)}
       />
 
-      {levelUpName && (
-        <LevelUpModal levelName={levelUpName} onClose={() => setLevelUpName(null)} />
-      )}
+      <ChatPanel
+        messages={messages}
+        onSend={handleSend}
+        userName={user?.name ?? ""}
+        onOpenSessions={toggleSessions}
+        sessionsOpen={sessionsOpen || mobileSessionsOpen}
+      />
 
-      {showShare && (
-        <ShareModal user={user} onClose={() => setShowShare(false)} />
-      )}
-
-      {showProfile && (
-        <ProfileModal user={user} onSave={handleSaveProfile} onClose={() => setShowProfile(false)} />
+      {profileOpen && user && (
+        <ProfileModal
+          user={user}
+          onSave={handleSaveProfile}
+          onClose={() => setProfileOpen(false)}
+        />
       )}
     </div>
   );
