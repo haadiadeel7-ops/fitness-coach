@@ -29,8 +29,102 @@ function processContent(content: string): string {
     /\[IMAGE:\s*([^\]]+)\]/gi,
     (_, desc) =>
       `\n![${desc.trim()}](https://image.pollinations.ai/prompt/${encodeURIComponent(
-        desc.trim() + ", fitness, professional photography, clean background"
-      )}?width=700&height=420&nologo=true&model=flux)\n`
+        desc.trim()
+      )}?width=700&height=420&nologo=true)\n`
+  );
+}
+
+function InlineImage({ src, alt }: { src: string; alt: string }) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+
+  return (
+    <div style={{ margin: "14px 0" }}>
+      {status === "loading" && (
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "500px",
+            aspectRatio: "16/9",
+            background: "var(--surface-3)",
+            border: "1px solid var(--border-2)",
+            borderRadius: "6px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+          }}
+        >
+          <div style={{ display: "flex", gap: "5px" }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: "var(--accent)",
+                  animation: `pulse 1.2s ease ${i * 0.22}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+          <div
+            style={{
+              fontSize: "10px",
+              color: "var(--text-dim)",
+              fontFamily: "var(--font-space-mono)",
+              letterSpacing: "0.08em",
+            }}
+          >
+            Generating image…
+          </div>
+        </div>
+      )}
+
+      {status === "error" && (
+        <div
+          style={{
+            padding: "12px 16px",
+            background: "var(--surface-3)",
+            border: "1px solid var(--border-2)",
+            borderRadius: "6px",
+            fontSize: "11px",
+            color: "var(--text-dim)",
+            fontFamily: "var(--font-space-mono)",
+          }}
+        >
+          Image unavailable
+        </div>
+      )}
+
+      <img
+        src={src}
+        alt={alt}
+        style={{
+          display: status === "loaded" ? "block" : "none",
+          maxWidth: "100%",
+          borderRadius: "6px",
+          border: "1px solid var(--border-2)",
+        }}
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+      />
+
+      {status === "loaded" && alt && (
+        <div
+          style={{
+            fontSize: "10px",
+            color: "var(--text-dim)",
+            marginTop: "6px",
+            fontFamily: "var(--font-space-mono)",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {alt}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -381,32 +475,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                       );
                     },
                     img: ({ src, alt }) => (
-                      <div style={{ margin: "14px 0" }}>
-                        <img
-                          src={src}
-                          alt={alt || ""}
-                          style={{
-                            maxWidth: "100%",
-                            borderRadius: "6px",
-                            border: "1px solid var(--border-2)",
-                            display: "block",
-                          }}
-                          loading="lazy"
-                        />
-                        {alt && (
-                          <div
-                            style={{
-                              fontSize: "10px",
-                              color: "var(--text-dim)",
-                              marginTop: "6px",
-                              fontFamily: "var(--font-space-mono)",
-                              letterSpacing: "0.04em",
-                            }}
-                          >
-                            {alt}
-                          </div>
-                        )}
-                      </div>
+                      <InlineImage src={src || ""} alt={alt || ""} />
                     ),
                   }}
                 >
