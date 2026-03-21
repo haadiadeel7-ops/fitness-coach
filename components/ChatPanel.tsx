@@ -30,7 +30,7 @@ function processContent(content: string, isGuest?: boolean): string {
   if (isGuest) {
     return content.replace(
       /\[IMAGE:\s*([^\]]+)\]/gi,
-      "\n*\ud83d\udd12 Sign up to unlock AI-generated images*\n"
+      "\n*Sign up to unlock AI-generated images*\n"
     );
   }
   return content.replace(
@@ -62,70 +62,33 @@ function InlineImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div style={{ margin: "14px 0" }}>
       {status !== "error" && !imageUrl && (
-        <div style={{
-          width: "100%", maxWidth: "500px", aspectRatio: "16/9",
-          background: "var(--surface-3)", border: "1px solid var(--border-2)",
-          borderRadius: "6px", display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center", gap: "10px",
-        }}>
+        <div style={{ width: "100%", maxWidth: "500px", aspectRatio: "16/9", background: "var(--surface-3)", border: "1px solid var(--border-2)", borderRadius: "6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px" }}>
           <div style={{ display: "flex", gap: "5px" }}>
             {[0, 1, 2].map((i) => (
-              <div key={i} style={{
-                width: "6px", height: "6px", borderRadius: "50%",
-                background: "var(--accent)",
-                animation: `pulse 1.2s ease ${i * 0.22}s infinite`,
-              }} />
+              <div key={i} style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent)", animation: `pulse 1.2s ease ${i * 0.22}s infinite` }} />
             ))}
           </div>
-          <div style={{ fontSize: "10px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)", letterSpacing: "0.08em" }}>
-            Generating image\u2026
-          </div>
+          <div style={{ fontSize: "10px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)", letterSpacing: "0.08em" }}>Generating image...</div>
         </div>
       )}
-
       {status === "error" && (
-        <div style={{
-          padding: "12px 16px", background: "var(--surface-3)",
-          border: "1px solid var(--border-2)", borderRadius: "6px",
-          fontSize: "11px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)",
-        }}>
-          Image unavailable
-        </div>
+        <div style={{ padding: "12px 16px", background: "var(--surface-3)", border: "1px solid var(--border-2)", borderRadius: "6px", fontSize: "11px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)" }}>Image unavailable</div>
       )}
-
       {imageUrl && (
         <>
-          <img
-            src={imageUrl} alt={alt}
-            style={{ display: status === "loaded" ? "block" : "none", maxWidth: "100%", borderRadius: "6px", border: "1px solid var(--border-2)" }}
-            onLoad={() => setStatus("loaded")}
-            onError={() => setStatus("error")}
-          />
+          <img src={imageUrl} alt={alt} style={{ display: status === "loaded" ? "block" : "none", maxWidth: "100%", borderRadius: "6px", border: "1px solid var(--border-2)" }} onLoad={() => setStatus("loaded")} onError={() => setStatus("error")} />
           {status !== "loaded" && (
-            <div style={{
-              width: "100%", maxWidth: "500px", aspectRatio: "1/1",
-              background: "var(--surface-3)", border: "1px solid var(--border-2)",
-              borderRadius: "6px", display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: "10px",
-            }}>
+            <div style={{ width: "100%", maxWidth: "500px", aspectRatio: "1/1", background: "var(--surface-3)", border: "1px solid var(--border-2)", borderRadius: "6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px" }}>
               <div style={{ display: "flex", gap: "5px" }}>
                 {[0, 1, 2].map((i) => (
-                  <div key={i} style={{
-                    width: "6px", height: "6px", borderRadius: "50%",
-                    background: "var(--accent)",
-                    animation: `pulse 1.2s ease ${i * 0.22}s infinite`,
-                  }} />
+                  <div key={i} style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent)", animation: `pulse 1.2s ease ${i * 0.22}s infinite` }} />
                 ))}
               </div>
-              <div style={{ fontSize: "10px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)", letterSpacing: "0.08em" }}>
-                Loading image\u2026
-              </div>
+              <div style={{ fontSize: "10px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)", letterSpacing: "0.08em" }}>Loading image...</div>
             </div>
           )}
           {status === "loaded" && alt && (
-            <div style={{ fontSize: "10px", color: "var(--text-dim)", marginTop: "6px", fontFamily: "var(--font-space-mono)", letterSpacing: "0.04em" }}>
-              {alt}
-            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-dim)", marginTop: "6px", fontFamily: "var(--font-space-mono)", letterSpacing: "0.04em" }}>{alt}</div>
           )}
         </>
       )}
@@ -167,6 +130,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
 
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid var(--border)" }}>
+
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "60px", padding: "0 24px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -186,9 +150,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-space-mono)", letterSpacing: "0.08em" }}>
             {isGuest ? "GUEST" : user.name.toUpperCase()}
           </span>
-          <button className="mobile-stats-btn" onClick={onOpenSidebar} style={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", color: "var(--accent)", padding: "6px 12px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", fontFamily: "var(--font-syne)" }}>
-            Stats
-          </button>
+          <button className="mobile-stats-btn" onClick={onOpenSidebar} style={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", color: "var(--accent)", padding: "6px 12px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", fontFamily: "var(--font-syne)" }}>Stats</button>
         </div>
       </div>
 
@@ -197,12 +159,12 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
         {messages.length === 0 && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "24px", textAlign: "center", animation: "fadeIn 0.5s ease" }}>
             <div>
-              <div style={{ fontSize: "44px", lineHeight: 1, marginBottom: "14px" }}>💪</div>
+              <div style={{ fontSize: "44px", lineHeight: 1, marginBottom: "14px" }}>&#x1F4AA;</div>
               <div style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.01em", marginBottom: "8px" }}>
                 Ready when you are{isGuest ? "" : `, ${user.name.split(" ")[0]}`}.
               </div>
               <div style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "260px", lineHeight: 1.65, margin: "0 auto" }}>
-                Ask about workouts, nutrition, recovery \u2014 anything fitness.
+                Ask about workouts, nutrition, recovery and anything fitness.
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%", maxWidth: "480px" }}>
@@ -300,26 +262,11 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
 
       {/* Guest banner */}
       {isGuest && (
-        <div style={{
-          borderTop: "1px solid var(--border)",
-          padding: "8px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: atGuestLimit ? "rgba(255,100,100,0.06)" : "var(--surface)",
-          flexShrink: 0,
-        }}>
-          <span style={{
-            fontSize: "10px",
-            fontFamily: "var(--font-space-mono)",
-            color: atGuestLimit ? "#ff6b6b" : (guestMessagesLeft ?? 0) <= 2 ? "#ffaa44" : "var(--text-dim)",
-            letterSpacing: "0.06em",
-          }}>
+        <div style={{ borderTop: "1px solid var(--border)", padding: "8px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", background: atGuestLimit ? "rgba(255,100,100,0.06)" : "var(--surface)", flexShrink: 0 }}>
+          <span style={{ fontSize: "10px", fontFamily: "var(--font-space-mono)", color: atGuestLimit ? "#ff6b6b" : (guestMessagesLeft ?? 0) <= 2 ? "#ffaa44" : "var(--text-dim)", letterSpacing: "0.06em" }}>
             {atGuestLimit ? "Daily limit reached" : `${guestMessagesLeft} / 7 messages remaining today`}
           </span>
-          <a href="/auth" style={{ fontSize: "10px", fontFamily: "var(--font-space-mono)", color: "var(--accent)", textDecoration: "underline", textDecorationColor: "rgba(0,255,136,0.35)", letterSpacing: "0.06em" }}>
-            Sign up for unlimited
-          </a>
+          <a href="/auth" style={{ fontSize: "10px", fontFamily: "var(--font-space-mono)", color: "var(--accent)", textDecoration: "underline", textDecorationColor: "rgba(0,255,136,0.35)", letterSpacing: "0.06em" }}>Sign up for unlimited</a>
         </div>
       )}
 
@@ -333,7 +280,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
             onKeyDown={handleKeyDown}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
-            placeholder={atGuestLimit ? "Daily limit reached — sign up for unlimited" : "Ask your coach anything..."}
+            placeholder={atGuestLimit ? "Daily limit reached - sign up for unlimited" : "Ask your coach anything..."}
             rows={1}
             disabled={atGuestLimit}
             style={{ flex: 1, background: "var(--surface-2)", border: `1px solid ${inputFocused ? "var(--accent)" : "var(--border-2)"}`, color: atGuestLimit ? "var(--text-dim)" : "var(--text)", padding: "12px 14px", fontSize: "14px", fontFamily: "var(--font-syne)", resize: "none", outline: "none", lineHeight: "1.55", overflow: "hidden", transition: "border-color 0.15s", cursor: atGuestLimit ? "not-allowed" : "text" }}
@@ -347,7 +294,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           </button>
         </div>
         <div style={{ marginTop: "8px", fontSize: "10px", color: "var(--text-dim)", fontFamily: "var(--font-space-mono)" }}>
-          {isGuest ? "Guest mode \u00b7 Sign up for unlimited messages + image generation" : "\u21b5 send \u00b7 shift+\u21b5 newline"}
+          {isGuest ? "Guest mode - sign up for unlimited messages + image generation" : "Enter to send  /  Shift+Enter for newline"}
         </div>
       </div>
     </div>
