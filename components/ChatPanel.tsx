@@ -475,7 +475,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                       );
                     },
                     img: ({ src, alt }) => (
-                      <InlineImage src={src || ""} alt={alt || ""} />
+                      <InlineImage src={typeof src === "string" ? src : ""} alt={alt || ""} />
                     ),
                   }}
                 >
