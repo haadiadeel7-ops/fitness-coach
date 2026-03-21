@@ -24,6 +24,14 @@ import ProfileModal from "@/components/ProfileModal";
 
 const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL!;
 
+function generateTitle(message: string): string {
+  let t = message.trim();
+  t = t.replace(/^(hi|hello|hey|can you|could you|please|i want to|i need|i would like|help me|what is|what are|how do i|how can i|tell me|give me|show me|i am|i'm|my name is)\s+/gi, "");
+  t = t.split(/[.!?]/)[0].trim();
+  if (t.length > 38) t = t.slice(0, 38).trimEnd() + "…";
+  return t.charAt(0).toUpperCase() + t.slice(1) || "New Chat";
+}
+
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -147,65 +155,81 @@ export default function Home() {
     nextAuthSignOut({ callbackUrl: "/auth" });
   }, []);
 
-  const handleSend = useCallback(async (content: string) => {
-    if (!user || loading) return;
+  const handleSend = useCallback(
+    async (content: string) => {
+      if (!user || loading) return;
 
-    let sessionId = activeIdRef.current;
-    if (!sessionId) {
-      const newSession = createSession();
-      setSessions((prev) => { const updated = [newSession, ...prev]; saveSessions(updated); return updated; });
-      sessionId = newSession.id;
-      setActiveSessionId(sessionId);
-    }
-
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content };
-    setMessages((prev) => [...prev, userMsg]);
-    setLoading(true);
-
-    try {
-      const res = await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: content,
-          sessionId: user.sessionId,
-          profile: { name: user.name, age: user.profile.age || null, gender: user.profile.gender || null, heightCm: user.profile.heightCm || null, weightKg: user.profile.weightKg || null, goal: user.profile.goal || null, activityLevel: user.profile.activityLevel || null },
-        }),
-      });
-
-      const data = await res.json();
-      const reply = data.reply || "I couldn't process that response. Please try again.";
-      const coachMsg: Message = { id: crypto.randomUUID(), role: "coach", content: reply };
-
-      setMessages((prev) => {
-        const updated = [...prev, coachMsg];
-        const sid = activeIdRef.current;
-        if (sid) {
-          setSessions((allSessions) => {
-            const s = allSessions.find((s) => s.id === sid);
-            if (!s) return allSessions;
-            const updatedSession: ChatSession = { ...s, messages: updated, title: s.title || content.slice(0, 52) + (content.length > 52 ? "…" : ""), updatedAt: new Date().toISOString() };
-            const newSessions = upsertSession(allSessions, updatedSession);
-            saveSessions(newSessions);
-            return newSessions;
-          });
-        }
-        return updated;
-      });
-
-      const updated = recordMessage(user);
-      setUser(updated);
-      const newLevel = getLevelForMessages(updated.messageCount).level;
-      if (newLevel > prevLevelRef.current) {
-        setLevelUpName(getLevelForMessages(updated.messageCount).name);
-        prevLevelRef.current = newLevel;
+      let sessionId = activeIdRef.current;
+      if (!sessionId) {
+        const newSession = createSession();
+        setSessions((prev) => { const updated = [newSession, ...prev]; saveSessions(updated); return updated; });
+        sessionId = newSession.id;
+        setActiveSessionId(sessionId);
       }
-    } catch {
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "coach", content: "Couldn't reach the server. Check your connection and try again." }]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, loading]);
+
+      const userMsg: Message = { id: crypto.randomUUID(), role: "user", content };
+      setMessages((prev) => [...prev, userMsg]);
+      setLoading(true);
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: content,
+            sessionId: user.sessionId,
+            profile: {
+              name: user.name,
+              age: user.profile.age || null,
+              gender: user.profile.gender || null,
+              heightCm: user.profile.heightCm || null,
+              weightKg: user.profile.weightKg || null,
+              goal: user.profile.goal || null,
+              activityLevel: user.profile.activityLevel || null,
+            },
+          }),
+        });
+
+        const data = await res.json();
+        const reply = data.reply || "I couldn't process that response. Please try again.";
+        const coachMsg: Message = { id: crypto.randomUUID(), role: "coach", content: reply };
+
+        setMessages((prev) => {
+          const updated = [...prev, coachMsg];
+          const sid = activeIdRef.current;
+          if (sid) {
+            setSessions((allSessions) => {
+              const s = allSessions.find((s) => s.id === sid);
+              if (!s) return allSessions;
+              const updatedSession: ChatSession = {
+                ...s,
+                messages: updated,
+                title: s.title || generateTitle(content),
+                updatedAt: new Date().toISOString(),
+              };
+              const newSessions = upsertSession(allSessions, updatedSession);
+              saveSessions(newSessions);
+              return newSessions;
+            });
+          }
+          return updated;
+        });
+
+        const updated = recordMessage(user);
+        setUser(updated);
+        const newLevel = getLevelForMessages(updated.messageCount).level;
+        if (newLevel > prevLevelRef.current) {
+          setLevelUpName(getLevelForMessages(updated.messageCount).name);
+          prevLevelRef.current = newLevel;
+        }
+      } catch {
+        setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "coach", content: "Couldn't reach the server. Check your connection and try again." }]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, loading]
+  );
 
   if (status === "loading" || !mounted) return null;
   if (status === "unauthenticated") return null;
