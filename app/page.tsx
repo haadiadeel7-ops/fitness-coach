@@ -74,9 +74,15 @@ export default function Home() {
     }
 
     let allSessions = loadSessions();
-    if (allSessions.length === 0) {
+    const lastVisit = localStorage.getItem("fitcoach_last_visit");
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    const shouldStartFresh = !lastVisit || now - parseInt(lastVisit) > fiveMinutes;
+    localStorage.setItem("fitcoach_last_visit", String(now));
+
+    if (allSessions.length === 0 || shouldStartFresh) {
       const fresh = createSession();
-      allSessions = [fresh];
+      allSessions = [fresh, ...allSessions];
       saveSessions(allSessions);
     }
     setSessions(allSessions);
