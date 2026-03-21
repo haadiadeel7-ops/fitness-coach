@@ -17,6 +17,23 @@ interface Props {
   sessionsOpen: boolean;
 }
 
+function getYouTubeEmbedId(url: string): string | null {
+  try {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+  } catch { return null; }
+}
+
+function processContent(content: string): string {
+  return content.replace(
+    /\[IMAGE:\s*([^\]]+)\]/gi,
+    (_, desc) =>
+      `\n![${desc.trim()}](https://image.pollinations.ai/prompt/${encodeURIComponent(
+        desc.trim() + ", fitness, professional photography, clean background"
+      )}?width=700&height=420&nologo=true&model=flux)\n`
+  );
+}
+
 export default function ChatPanel({ user, messages, loading, onSend, onOpenSidebar, onOpenSessions, sessionsOpen }: Props) {
   const [input, setInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
@@ -76,7 +93,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {/* Sessions toggle */}
           <button
             onClick={onOpenSessions}
             title={sessionsOpen ? "Hide chats" : "Show chats"}
@@ -118,13 +134,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               animation: "glow 2.5s ease infinite",
             }}
           />
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
-            }}
-          >
+          <span style={{ fontSize: "14px", fontWeight: 700, letterSpacing: "-0.01em" }}>
             FitCoach
           </span>
         </div>
@@ -140,8 +150,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           >
             {user.name.toUpperCase()}
           </span>
-
-          {/* Mobile stats toggle — hidden on desktop via CSS */}
           <button
             className="mobile-stats-btn"
             onClick={onOpenSidebar}
@@ -189,14 +197,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           >
             <div>
               <div style={{ fontSize: "44px", lineHeight: 1, marginBottom: "14px" }}>💪</div>
-              <div
-                style={{
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  letterSpacing: "-0.01em",
-                  marginBottom: "8px",
-                }}
-              >
+              <div style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.01em", marginBottom: "8px" }}>
                 Ready when you are, {user.name.split(" ")[0]}.
               </div>
               <div
@@ -271,7 +272,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               animation: "fadeUp 0.25s ease forwards",
             }}
           >
-            {/* Coach avatar */}
             {msg.role === "coach" && (
               <div
                 style={{
@@ -294,20 +294,17 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               </div>
             )}
 
-            {/* Bubble */}
             <div
               className={msg.role === "coach" ? "coach-message" : undefined}
               style={{
                 maxWidth: "70%",
                 padding: "12px 16px",
-                background:
-                  msg.role === "user" ? "var(--accent)" : "var(--surface-2)",
+                background: msg.role === "user" ? "var(--accent)" : "var(--surface-2)",
                 color: msg.role === "user" ? "#000" : "var(--text)",
                 fontSize: "14px",
                 lineHeight: "1.65",
                 fontWeight: msg.role === "user" ? 600 : 400,
-                borderLeft:
-                  msg.role === "coach" ? "2px solid var(--accent)" : "none",
+                borderLeft: msg.role === "coach" ? "2px solid var(--accent)" : "none",
               }}
             >
               {msg.role === "user" ? (
@@ -315,9 +312,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               ) : (
                 <ReactMarkdown
                   components={{
-                    p: ({ children }) => (
-                      <p style={{ margin: "0 0 10px 0" }}>{children}</p>
-                    ),
+                    p: ({ children }) => <p style={{ margin: "0 0 10px 0" }}>{children}</p>,
                     h1: ({ children }) => (
                       <h1 style={{ fontSize: "16px", fontWeight: 800, margin: "14px 0 6px", letterSpacing: "-0.01em" }}>{children}</h1>
                     ),
@@ -345,25 +340,85 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                     code: ({ children }) => (
                       <code style={{ background: "var(--surface-3)", padding: "1px 5px", fontSize: "12px", fontFamily: "var(--font-space-mono)" }}>{children}</code>
                     ),
+                    a: ({ href, children }) => {
+                      if (!href) return <>{children}</>;
+                      const ytId = getYouTubeEmbedId(href);
+                      if (ytId) {
+                        return (
+                          <div style={{ margin: "12px 0", borderRadius: "6px", overflow: "hidden", border: "1px solid var(--border-2)" }}>
+                            <iframe
+                              width="100%"
+                              style={{ aspectRatio: "16/9", border: "none", display: "block" }}
+                              src={`https://www.youtube.com/embed/${ytId}`}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        );
+                      }
+                      const isYtSearch = href.includes("youtube.com/results");
+                      return (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: "var(--accent)",
+                            textDecoration: "underline",
+                            textDecorationColor: "rgba(0,255,136,0.4)",
+                            display: isYtSearch ? "inline-flex" : "inline",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          {isYtSearch && (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                              <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+                            </svg>
+                          )}
+                          {children}
+                        </a>
+                      );
+                    },
+                    img: ({ src, alt }) => (
+                      <div style={{ margin: "14px 0" }}>
+                        <img
+                          src={src}
+                          alt={alt || ""}
+                          style={{
+                            maxWidth: "100%",
+                            borderRadius: "6px",
+                            border: "1px solid var(--border-2)",
+                            display: "block",
+                          }}
+                          loading="lazy"
+                        />
+                        {alt && (
+                          <div
+                            style={{
+                              fontSize: "10px",
+                              color: "var(--text-dim)",
+                              marginTop: "6px",
+                              fontFamily: "var(--font-space-mono)",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            {alt}
+                          </div>
+                        )}
+                      </div>
+                    ),
                   }}
                 >
-                  {msg.content}
+                  {processContent(msg.content)}
                 </ReactMarkdown>
               )}
             </div>
           </div>
         ))}
 
-        {/* Typing indicator */}
         {loading && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "10px",
-              animation: "fadeUp 0.2s ease",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", animation: "fadeUp 0.2s ease" }}>
             <div
               style={{
                 width: "28px",
@@ -412,20 +467,8 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
       </div>
 
       {/* ── Input ── */}
-      <div
-        style={{
-          borderTop: "1px solid var(--border)",
-          padding: "16px 24px",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            alignItems: "flex-end",
-          }}
-        >
+      <div style={{ borderTop: "1px solid var(--border)", padding: "16px 24px", flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
           <textarea
             ref={textareaRef}
             value={input}
@@ -450,7 +493,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               transition: "border-color 0.15s",
             }}
           />
-
           <button
             onClick={send}
             disabled={!canSend}
@@ -473,7 +515,6 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
             Send
           </button>
         </div>
-
         <div
           style={{
             marginTop: "8px",
