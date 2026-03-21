@@ -16,8 +16,8 @@
   --accent-dim: rgba(0, 255, 136, 0.08);
   --accent-mid: rgba(0, 255, 136, 0.18);
   --text:       #ebebeb;
-  --text-muted: #484848;
-  --text-dim:   #2a2a2a;
+  --text-muted: #888888;
+  --text-dim:   #555555;
 }
 
 *, *::before, *::after {
@@ -46,7 +46,7 @@ body {
 ::-webkit-scrollbar-thumb    { background: var(--border-2); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ── Keyframes ─────────────────────────────────────── */
+/* ── Keyframes ──────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -127,7 +127,7 @@ body {
     transform: translateX(0);
   }
 
-  /* Restore sessions panel on mobile (desktop sessions-hidden class doesn't apply) */
+  /* Restore sessions panel visibility on mobile (desktop-hidden class doesn't apply) */
   .sessions-panel.sessions-hidden {
     width: 80% !important;
     min-width: unset !important;
