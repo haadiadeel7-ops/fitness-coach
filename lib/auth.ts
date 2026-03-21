@@ -1,6 +1,4 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import Credentials from "next-auth/providers/credentials";
 
 const N8N_USER_URL = process.env.N8N_USER_WEBHOOK!;
@@ -19,15 +17,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    MicrosoftEntraID({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID ?? "common"}/v2.0`,
-    }),
     Credentials({
       credentials: { email: {}, password: {} },
       async authorize(credentials) {
@@ -42,12 +31,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider !== "credentials") {
-        await fetchN8nUser({ action: "save", email: user.email, name: user.name });
-      }
-      return true;
-    },
     async jwt({ token, user }) {
       if (user) { token.email = user.email; token.name = user.name; }
       return token;
