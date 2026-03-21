@@ -30,14 +30,12 @@ export default function Home() {
   const [user, setUser] = useState<UserData | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Sessions
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
 
-  // UI state
   const [loading, setLoading] = useState(false);
   const [levelUpName, setLevelUpName] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
@@ -49,9 +47,7 @@ export default function Home() {
   useEffect(() => { activeIdRef.current = activeSessionId; }, [activeSessionId]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/auth");
-    }
+    if (status === "unauthenticated") router.replace("/auth");
   }, [status, router]);
 
   useEffect(() => {
@@ -59,15 +55,11 @@ export default function Home() {
     setMounted(true);
 
     let savedUser = loadUser();
-    // Reset localStorage if it belongs to a different user
     if (savedUser && session?.user?.name && savedUser.name !== session.user.name) {
       signOut();
       savedUser = null;
     }
-    // Auto-create localStorage user from NextAuth session on first sign-in
-    if (!savedUser && session?.user?.name) {
-      savedUser = createUser(session.user.name);
-    }
+    if (!savedUser && session?.user?.name) savedUser = createUser(session.user.name);
     if (savedUser) {
       setUser(savedUser);
       prevLevelRef.current = getLevelForMessages(savedUser.messageCount).level;
@@ -86,11 +78,7 @@ export default function Home() {
 
   const handleNewChat = useCallback(() => {
     const newSession = createSession();
-    setSessions((prev) => {
-      const updated = [newSession, ...prev];
-      saveSessions(updated);
-      return updated;
-    });
+    setSessions((prev) => { const updated = [newSession, ...prev]; saveSessions(updated); return updated; });
     setActiveSessionId(newSession.id);
     setMessages([]);
     setMobileSessionsOpen(false);
@@ -99,13 +87,18 @@ export default function Home() {
   const handleSelectSession = useCallback((id: string) => {
     setSessions((prev) => {
       const s = prev.find((s) => s.id === id);
-      if (s) {
-        setActiveSessionId(id);
-        setMessages(s.messages);
-      }
+      if (s) { setActiveSessionId(id); setMessages(s.messages); }
       return prev;
     });
     setMobileSessionsOpen(false);
+  }, []);
+
+  const handleRenameSession = useCallback((id: string, title: string) => {
+    setSessions((prev) => {
+      const updated = prev.map((s) => s.id === id ? { ...s, title, updatedAt: new Date().toISOString() } : s);
+      saveSessions(updated);
+      return updated;
+    });
   }, []);
 
   const handleDeleteSession = useCallback((id: string) => {
@@ -154,108 +147,78 @@ export default function Home() {
     nextAuthSignOut({ callbackUrl: "/auth" });
   }, []);
 
-  const handleSend = useCallback(
-    async (content: string) => {
-      if (!user || loading) return;
+  const handleSend = useCallback(async (content: string) => {
+    if (!user || loading) return;
 
-      let sessionId = activeIdRef.current;
-      if (!sessionId) {
-        const newSession = createSession();
-        setSessions((prev) => {
-          const updated = [newSession, ...prev];
-          saveSessions(updated);
-          return updated;
-        });
-        sessionId = newSession.id;
-        setActiveSessionId(sessionId);
-      }
+    let sessionId = activeIdRef.current;
+    if (!sessionId) {
+      const newSession = createSession();
+      setSessions((prev) => { const updated = [newSession, ...prev]; saveSessions(updated); return updated; });
+      sessionId = newSession.id;
+      setActiveSessionId(sessionId);
+    }
 
-      const userMsg: Message = { id: crypto.randomUUID(), role: "user", content };
-      setMessages((prev) => [...prev, userMsg]);
-      setLoading(true);
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
 
-      try {
-        const res = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: content,
-            sessionId: user.sessionId,
-            profile: {
-              name: user.name,
-              age: user.profile.age || null,
-              gender: user.profile.gender || null,
-              heightCm: user.profile.heightCm || null,
-              weightKg: user.profile.weightKg || null,
-              goal: user.profile.goal || null,
-              activityLevel: user.profile.activityLevel || null,
-            },
-          }),
-        });
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content,
+          sessionId: user.sessionId,
+          profile: { name: user.name, age: user.profile.age || null, gender: user.profile.gender || null, heightCm: user.profile.heightCm || null, weightKg: user.profile.weightKg || null, goal: user.profile.goal || null, activityLevel: user.profile.activityLevel || null },
+        }),
+      });
 
-        const data = await res.json();
-        const reply = data.reply || "I couldn't process that response. Please try again.";
-        const coachMsg: Message = { id: crypto.randomUUID(), role: "coach", content: reply };
+      const data = await res.json();
+      const reply = data.reply || "I couldn't process that response. Please try again.";
+      const coachMsg: Message = { id: crypto.randomUUID(), role: "coach", content: reply };
 
-        setMessages((prev) => {
-          const updated = [...prev, coachMsg];
-          const sid = activeIdRef.current;
-          if (sid) {
-            setSessions((allSessions) => {
-              const s = allSessions.find((s) => s.id === sid);
-              if (!s) return allSessions;
-              const updatedSession: ChatSession = {
-                ...s,
-                messages: updated,
-                title: s.title || content.slice(0, 52) + (content.length > 52 ? "…" : ""),
-                updatedAt: new Date().toISOString(),
-              };
-              const newSessions = upsertSession(allSessions, updatedSession);
-              saveSessions(newSessions);
-              return newSessions;
-            });
-          }
-          return updated;
-        });
-
-        const updated = recordMessage(user);
-        setUser(updated);
-
-        const newLevel = getLevelForMessages(updated.messageCount).level;
-        if (newLevel > prevLevelRef.current) {
-          setLevelUpName(getLevelForMessages(updated.messageCount).name);
-          prevLevelRef.current = newLevel;
+      setMessages((prev) => {
+        const updated = [...prev, coachMsg];
+        const sid = activeIdRef.current;
+        if (sid) {
+          setSessions((allSessions) => {
+            const s = allSessions.find((s) => s.id === sid);
+            if (!s) return allSessions;
+            const updatedSession: ChatSession = { ...s, messages: updated, title: s.title || content.slice(0, 52) + (content.length > 52 ? "…" : ""), updatedAt: new Date().toISOString() };
+            const newSessions = upsertSession(allSessions, updatedSession);
+            saveSessions(newSessions);
+            return newSessions;
+          });
         }
-      } catch {
-        const errMsg: Message = { id: crypto.randomUUID(), role: "coach", content: "Couldn't reach the server. Check your connection and try again." };
-        setMessages((prev) => [...prev, errMsg]);
-      } finally {
-        setLoading(false);
+        return updated;
+      });
+
+      const updated = recordMessage(user);
+      setUser(updated);
+      const newLevel = getLevelForMessages(updated.messageCount).level;
+      if (newLevel > prevLevelRef.current) {
+        setLevelUpName(getLevelForMessages(updated.messageCount).name);
+        prevLevelRef.current = newLevel;
       }
-    },
-    [user, loading]
-  );
+    } catch {
+      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "coach", content: "Couldn't reach the server. Check your connection and try again." }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loading]);
 
   if (status === "loading" || !mounted) return null;
   if (status === "unauthenticated") return null;
-
-  if (!user) {
-    return <Onboarding onStart={handleStart} />;
-  }
+  if (!user) return <Onboarding onStart={handleStart} />;
 
   const toggleSessions = () => {
-    if (window.innerWidth <= 768) {
-      setMobileSessionsOpen((v) => !v);
-    } else {
-      setSessionsOpen((v) => !v);
-    }
+    if (window.innerWidth <= 768) setMobileSessionsOpen((v) => !v);
+    else setSessionsOpen((v) => !v);
   };
 
   return (
     <div className="app-layout">
-      {mobileSessionsOpen && (
-        <div className="sessions-backdrop" onClick={() => setMobileSessionsOpen(false)} />
-      )}
+      {mobileSessionsOpen && <div className="sessions-backdrop" onClick={() => setMobileSessionsOpen(false)} />}
 
       <SessionsPanel
         sessions={sessions}
@@ -263,6 +226,7 @@ export default function Home() {
         onSelect={handleSelectSession}
         onNew={handleNewChat}
         onDelete={handleDeleteSession}
+        onRename={handleRenameSession}
         onClose={() => { setSessionsOpen(false); setMobileSessionsOpen(false); }}
         mobileOpen={mobileSessionsOpen}
         desktopVisible={sessionsOpen}
@@ -278,9 +242,7 @@ export default function Home() {
         sessionsOpen={sessionsOpen}
       />
 
-      {mobileSidebarOpen && (
-        <div className="sidebar-backdrop" onClick={() => setMobileSidebarOpen(false)} />
-      )}
+      {mobileSidebarOpen && <div className="sidebar-backdrop" onClick={() => setMobileSidebarOpen(false)} />}
 
       <Sidebar
         user={user}
