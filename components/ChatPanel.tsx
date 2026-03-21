@@ -182,30 +182,80 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: "14px",
+              gap: "24px",
               textAlign: "center",
               animation: "fadeIn 0.5s ease",
             }}
           >
-            <div style={{ fontSize: "44px", lineHeight: 1 }}>💪</div>
-            <div
-              style={{
-                fontSize: "16px",
-                fontWeight: 700,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Ready when you are, {user.name.split(" ")[0]}.
+            <div>
+              <div style={{ fontSize: "44px", lineHeight: 1, marginBottom: "14px" }}>💪</div>
+              <div
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  letterSpacing: "-0.01em",
+                  marginBottom: "8px",
+                }}
+              >
+                Ready when you are, {user.name.split(" ")[0]}.
+              </div>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "var(--text-muted)",
+                  maxWidth: "260px",
+                  lineHeight: 1.65,
+                  margin: "0 auto",
+                }}
+              >
+                Ask about workouts, nutrition, recovery — anything fitness.
+              </div>
             </div>
+
             <div
               style={{
-                fontSize: "13px",
-                color: "var(--text-muted)",
-                maxWidth: "260px",
-                lineHeight: 1.65,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "8px",
+                width: "100%",
+                maxWidth: "480px",
               }}
             >
-              Ask about workouts, nutrition, recovery — anything fitness.
+              {[
+                { label: "Build a workout plan", prompt: "Build me a 4-day workout plan to gain muscle" },
+                { label: "Calculate my TDEE", prompt: "Calculate my TDEE and daily calorie target" },
+                { label: "Best exercises for abs", prompt: "What are the best exercises for building abs?" },
+                { label: "How much protein?", prompt: "How much protein should I eat per day to build muscle?" },
+                { label: "Fix my squat form", prompt: "Give me tips to improve my squat form and depth" },
+                { label: "Lose fat, keep muscle", prompt: "How do I lose body fat without losing muscle mass?" },
+              ].map(({ label, prompt }) => (
+                <button
+                  key={label}
+                  onClick={() => onSend(prompt)}
+                  style={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border-2)",
+                    color: "var(--text)",
+                    padding: "10px 14px",
+                    fontSize: "12px",
+                    fontFamily: "var(--font-syne)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    lineHeight: 1.4,
+                    transition: "border-color 0.15s, background 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--accent-mid)";
+                    e.currentTarget.style.background = "var(--accent-dim)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-2)";
+                    e.currentTarget.style.background = "var(--surface-2)";
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         )}
