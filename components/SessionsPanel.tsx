@@ -29,15 +29,7 @@ export default function SessionsPanel({
   return (
     <div
       className={`sessions-panel${mobileOpen ? " open" : ""}${!desktopVisible ? " sessions-hidden" : ""}`}
-      style={{
-        width: "220px",
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--surface)",
-        borderRight: "1px solid var(--border)",
-        overflowY: "auto",
-      }}
+      style={{ width: "220px", flexShrink: 0, display: "flex", flexDirection: "column", background: "var(--surface)", borderRight: "1px solid var(--border)", overflowY: "auto" }}
     >
       <div style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <span style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text)", fontFamily: "var(--font-space-mono)" }}>Chats</span>
@@ -155,7 +147,7 @@ function SessionItem({ session, active, onSelect, onDelete, onRename }: {
             </svg>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            onClick={(e) => { e.stopPropagation(); if (window.confirm("Delete this chat?")) onDelete(); }}
             title="Delete"
             style={{ background: "transparent", border: "none", color: "var(--text-dim)", fontSize: "14px", cursor: "pointer", lineHeight: 1, padding: "2px 4px" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "#ff4444")}
