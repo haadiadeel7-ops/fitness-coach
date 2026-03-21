@@ -5,19 +5,40 @@
   --font-mono: var(--font-space-mono);
 }
 
+/* ── Light theme (default) ── */
 :root {
-  --bg:         #080808;
-  --surface:    #101010;
-  --surface-2:  #161616;
-  --surface-3:  #1e1e1e;
-  --border:     #1c1c1c;
-  --border-2:   #262626;
-  --accent:     #00ff88;
-  --accent-dim: rgba(0, 255, 136, 0.08);
-  --accent-mid: rgba(0, 255, 136, 0.18);
-  --text:       #ebebeb;
-  --text-muted: #ebebeb;
-  --text-dim:   #aaaaaa;
+  --bg:          #f5f4f1;
+  --surface:     #ffffff;
+  --surface-2:   #f0efec;
+  --surface-3:   #e6e5e1;
+  --border:      #e2e1db;
+  --border-2:    #d2d0ca;
+  --accent:      #16a34a;
+  --accent-dim:  rgba(22, 163, 74, 0.08);
+  --accent-mid:  rgba(22, 163, 74, 0.22);
+  --accent-fg:   #ffffff;
+  --accent-glow: rgba(22, 163, 74, 0.3);
+  --text:        #111111;
+  --text-muted:  #555555;
+  --text-dim:    #999999;
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
+  --bg:          #080808;
+  --surface:     #101010;
+  --surface-2:   #161616;
+  --surface-3:   #1e1e1e;
+  --border:      #1c1c1c;
+  --border-2:    #262626;
+  --accent:      #00ff88;
+  --accent-dim:  rgba(0, 255, 136, 0.08);
+  --accent-mid:  rgba(0, 255, 136, 0.18);
+  --accent-fg:   #000000;
+  --accent-glow: rgba(0, 255, 136, 0.6);
+  --text:        #ebebeb;
+  --text-muted:  #ebebeb;
+  --text-dim:    #aaaaaa;
 }
 
 *, *::before, *::after {
@@ -26,8 +47,7 @@
   padding: 0;
 }
 
-html,
-body {
+html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
@@ -38,7 +58,7 @@ body {
 
 ::selection {
   background: var(--accent);
-  color: #000;
+  color: var(--accent-fg);
 }
 
 ::-webkit-scrollbar          { width: 3px; }
@@ -101,20 +121,16 @@ body {
 
   .sidebar-panel {
     position: fixed !important;
-    top: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; right: 0; bottom: 0;
     width: 88% !important;
     max-width: 320px;
     z-index: 150;
     transform: translateX(110%);
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+    box-shadow: -8px 0 32px rgba(0,0,0,0.18);
   }
 
-  .sidebar-panel.open {
-    transform: translateX(0);
-  }
+  .sidebar-panel.open { transform: translateX(0); }
 
   .sessions-panel.sessions-hidden {
     width: 80% !important;
@@ -125,41 +141,32 @@ body {
 
   .sessions-panel {
     position: fixed !important;
-    top: 0;
-    left: 0;
-    bottom: 0;
+    top: 0; left: 0; bottom: 0;
     width: 80% !important;
     max-width: 280px;
     z-index: 150;
     transform: translateX(-110%);
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.18);
   }
 
-  .sessions-panel.open {
-    transform: translateX(0);
-  }
+  .sessions-panel.open { transform: translateX(0); }
 
   .sidebar-backdrop {
     display: block !important;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
     z-index: 140;
     animation: fadeIn 0.2s ease;
   }
 
   .sessions-backdrop {
     display: block !important;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
     z-index: 140;
     animation: fadeIn 0.2s ease;
   }
 
-  .coach-message,
-  .user-bubble {
-    max-width: 90% !important;
-  }
+  .coach-message, .user-bubble { max-width: 90% !important; }
 }

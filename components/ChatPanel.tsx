@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { UserData } from "@/lib/storage";
 import { Message } from "@/lib/types";
+import { useTheme } from "@/components/ThemeProvider";
 
 export type { Message };
 
@@ -45,19 +46,16 @@ function processContent(content: string, isGuest?: boolean): string {
 }
 
 function markdownToHtml(md: string): string {
-  // Strip image tags and [EXPORTABLE]
   let text = md
     .replace(/^\[EXPORTABLE\]\s*/i, '')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
     .replace(/\[IMAGE:[^\]]+\]/gi, '');
 
-  // Inline formatting
   text = text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // strip links to plain text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 
-  // Process line by line
   const lines = text.split('\n');
   const out: string[] = [];
   let inUl = false;
@@ -95,7 +93,6 @@ function markdownToHtml(md: string): string {
   }
   if (inUl) out.push('</ul>');
   if (inOl) out.push('</ol>');
-
   return out.join('\n');
 }
 
@@ -194,6 +191,7 @@ function InlineImage({ src, alt }: { src: string; alt: string }) {
 }
 
 export default function ChatPanel({ user, messages, loading, onSend, onOpenSidebar, onOpenSessions, sessionsOpen, isGuest, guestMessagesLeft }: Props) {
+  const { theme, toggle } = useTheme();
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [dismissedExports, setDismissedExports] = useState<Set<string>>(new Set());
@@ -244,10 +242,41 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--accent)', animation: 'glow 2.5s ease infinite' }} />
           <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '-0.01em' }}>FitCoach</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-space-mono)', letterSpacing: '0.08em' }}>
             {isGuest ? 'GUEST' : user.name.toUpperCase()}
           </span>
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggle}
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s', borderRadius: '0' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent-mid)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+          >
+            {theme === 'light' ? (
+              /* Moon — click to go dark */
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            ) : (
+              /* Sun — click to go light */
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            )}
+          </button>
+
           <button className="mobile-stats-btn" onClick={onOpenSidebar} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--accent)', padding: '6px 12px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-syne)' }}>Stats</button>
         </div>
       </div>
@@ -300,7 +329,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                 )}
                 <div
                   className={msg.role === 'coach' ? 'coach-message' : undefined}
-                  style={{ maxWidth: '70%', padding: '12px 16px', background: msg.role === 'user' ? 'var(--accent)' : 'var(--surface-2)', color: msg.role === 'user' ? '#000' : 'var(--text)', fontSize: '14px', lineHeight: '1.65', fontWeight: msg.role === 'user' ? 600 : 400, borderLeft: msg.role === 'coach' ? '2px solid var(--accent)' : 'none' }}
+                  style={{ maxWidth: '70%', padding: '12px 16px', background: msg.role === 'user' ? 'var(--accent)' : 'var(--surface-2)', color: msg.role === 'user' ? 'var(--accent-fg)' : 'var(--text)', fontSize: '14px', lineHeight: '1.65', fontWeight: msg.role === 'user' ? 600 : 400, borderLeft: msg.role === 'coach' ? '2px solid var(--accent)' : 'none' }}
                 >
                   {msg.role === 'user' ? (
                     msg.content
@@ -329,7 +358,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                           }
                           const isYtSearch = href.includes('youtube.com/results');
                           return (
-                            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', textDecorationColor: 'rgba(0,255,136,0.4)', display: isYtSearch ? 'inline-flex' : 'inline', alignItems: 'center', gap: '5px' }}>
+                            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline', textDecorationColor: 'rgba(22,163,74,0.4)', display: isYtSearch ? 'inline-flex' : 'inline', alignItems: 'center', gap: '5px' }}>
                               {isYtSearch && (
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
                                   <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/>
@@ -361,7 +390,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-space-mono)', letterSpacing: '0.04em' }}>Save this plan?</span>
                     <button
                       onClick={() => exportAsPDF(clean, user.name)}
-                      style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '5px 12px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-syne)' }}
+                      style={{ background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', padding: '5px 12px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-syne)' }}
                     >
                       Download PDF
                     </button>
@@ -369,9 +398,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
                       onClick={() => setDismissedExports((prev) => new Set(prev).add(msg.id))}
                       style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: '14px', cursor: 'pointer', lineHeight: 1, padding: '2px 4px' }}
                       title="Dismiss"
-                    >
-                      &#x2715;
-                    </button>
+                    >&#x2715;</button>
                   </div>
                 </div>
               )}
@@ -399,7 +426,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           <span style={{ fontSize: '10px', fontFamily: 'var(--font-space-mono)', color: atGuestLimit ? '#ff6b6b' : (guestMessagesLeft ?? 0) <= 2 ? '#ffaa44' : 'var(--text-dim)', letterSpacing: '0.06em' }}>
             {atGuestLimit ? 'Daily limit reached' : `${guestMessagesLeft} / 7 messages remaining today`}
           </span>
-          <a href="/auth" style={{ fontSize: '10px', fontFamily: 'var(--font-space-mono)', color: 'var(--accent)', textDecoration: 'underline', textDecorationColor: 'rgba(0,255,136,0.35)', letterSpacing: '0.06em' }}>Sign up for unlimited</a>
+          <a href="/auth" style={{ fontSize: '10px', fontFamily: 'var(--font-space-mono)', color: 'var(--accent)', textDecoration: 'underline', textDecorationColor: 'rgba(22,163,74,0.35)', letterSpacing: '0.06em' }}>Sign up for unlimited</a>
         </div>
       )}
 
@@ -421,7 +448,7 @@ export default function ChatPanel({ user, messages, loading, onSend, onOpenSideb
           <button
             onClick={send}
             disabled={!canSend}
-            style={{ flexShrink: 0, background: canSend ? 'var(--accent)' : 'var(--surface-3)', color: canSend ? '#000' : 'var(--text-muted)', border: 'none', padding: '12px 18px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: canSend ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-syne)', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+            style={{ flexShrink: 0, background: canSend ? 'var(--accent)' : 'var(--surface-3)', color: canSend ? 'var(--accent-fg)' : 'var(--text-muted)', border: 'none', padding: '12px 18px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: canSend ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-syne)', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
           >
             Send
           </button>

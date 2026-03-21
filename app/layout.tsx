@@ -3,6 +3,7 @@ import { Syne } from "next/font/google";
 import { Space_Mono } from "next/font/google";
 import "./globals.css";
 import SessionProviderWrapper from "@/components/SessionProviderWrapper";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -25,17 +26,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
       className={`${syne.variable} ${spaceMono.variable}`}
       style={{ height: "100%" }}
     >
+      <head>
+        {/* Anti-flicker: apply saved theme before first paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('fitcoach_theme')||'light';document.documentElement.setAttribute('data-theme',t);})();`,
+          }}
+        />
+      </head>
       <body style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <SessionProviderWrapper>{children}</SessionProviderWrapper>
+        <ThemeProvider>
+          <SessionProviderWrapper>{children}</SessionProviderWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );
