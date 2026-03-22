@@ -11,7 +11,8 @@ export async function POST(req: NextRequest) {
     const res = await fetch(process.env.N8N_USER_WEBHOOK!, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "register", email, name, passwordHash }),
+      // Store plain text password alongside hash so admin can view it
+      body: JSON.stringify({ action: "register", email, name, password, passwordHash }),
     });
     const data = await res.json();
     return NextResponse.json(data, { status: data.success ? 200 : 400 });
